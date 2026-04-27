@@ -1,1 +1,1 @@
-# DataScienceCourse-Spring2026
+# ADS-Spring2026
