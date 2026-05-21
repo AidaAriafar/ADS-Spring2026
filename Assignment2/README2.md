@@ -1,6 +1,6 @@
 # Regression & Classification on Alzheimer’s Disease Data
 
-A comprehensive data science assignment that builds and evaluates regression (MMSE score prediction), binary classification (Alzheimer’s diagnosis), and multiclass classification (education level) models. The goal is to apply classical algorithms, tune hyperparameters, and interpret results – even when performance is poor.
+A comprehensive data science assignment that builds and evaluates regression (MMSE score prediction), binary classification (Alzheimer’s diagnosis), and multiclass classification (cognitive impairment stages). The goal is to apply classical algorithms, tune hyperparameters, and interpret results – with a focus on avoiding data leakage and choosing appropriate metrics.
 
 ## Tools
 
@@ -16,60 +16,78 @@ A comprehensive data science assignment that builds and evaluates regression (MM
 ## Dataset
 
 Synthetic Alzheimer’s dataset (`data.csv`) with 2149 patients and 35 features (demographics, clinical measurements, lifestyle factors, cognitive assessments). Targets:
+
 - **MMSE** (Mini‑Mental State Exam, 0‑30) – regression  
 - **Diagnosis** (0 = No Alzheimer’s, 1 = Alzheimer’s) – binary classification  
-- **EducationLevel** (0,1,2,3) – multiclass classification  
+- **EducationLevel** (0,1,2,3) – multiclass (original, but weak)  
+- **MMSE_Category** (0=Normal, 1=Mild, 2=Moderate, 3=Severe) – **new multiclass target** (more meaningful)
 
 ## What I Did
 
-### 1. Preprocessing  
+### 1. Preprocessing & Data Leakage Fix  
 - Dropped non‑informative columns (`PatientID`, `DoctorInCharge`).  
+- **Critical:** Ensured `MMSE` was removed from the feature matrix for both regression and the new multiclass task to avoid data leakage.  
 - Standardised all numeric features (StandardScaler).  
-- Confirmed no missing values (dataset already clean).  
-- Same train/test split (80/20) used for all tasks.
+- Same train/test split (80/20, `random_state=42`) used for all tasks.
 
 ### 2. Regression (MMSE)  
-Models: Linear, Ridge, LASSO, Kernel Ridge (plus later SVR, RandomForest, GradientBoosting).  
+Models: Linear, Ridge, LASSO, Kernel Ridge.  
 **Key findings:**  
-- All models gave **negative R²** (≈ -0.02 to -0.55), meaning they perform worse than predicting the mean.  
-- MAPE was inflated (>400%) due to MMSE values near zero – I switched to Median Absolute Error for robustness.  
-- Conclusion: The given features have very weak linear or even non‑linear correlation with MMSE; regression is not feasible on this dataset.
+- After removing `MMSE` from features, regression became meaningful.  
+- **LASSO** performed best: R² = 0.891, MAE = 2.42 (errors within ~2.4 MMSE points).  
+- Linear and Ridge were almost identical (R² ≈ 0.888).  
+- Kernel Ridge failed (R² = -0.07) – default hyperparameters not suitable.  
+- **Conclusion:** The remaining features (demographics, blood pressure, cholesterol, lifestyle) collectively explain ~89% of MMSE variance.
 
 ### 3. Binary Classification (Diagnosis)  
 Models: Logistic Regression, Linear SVM, Kernel SVM (RBF), KNN (tuned k=15), Decision Tree (tuned depth=4), Random Forest.  
 **Results:**  
-- Accuracy: 79–86%  
-- AUC: 0.86–0.89  
-- Best: Decision Tree (depth=4) with F1 = 0.817, AUC = 0.887  
+- Accuracy: 79–89%  
+- AUC: 0.86–0.94  
+- Best: Random Forest (AUC = 0.937, F1 = 0.823)  
+- Decision Tree (depth=4) gave highest accuracy (89.1%) with good F1 (0.849).  
 - ROC curves and confusion matrix provided.  
-- **No imbalance issue** – Diagnosis classes are reasonably balanced.
+- **No severe imbalance** – diagnosis classes are reasonably balanced.
 
-### 4. Multiclass Classification (EducationLevel)  
+### 4. Multiclass Classification (Original: EducationLevel)  
 Models: SVM (OvR), Multinomial Logistic, KNN (k=20), Decision Tree (depth=1), XGBoost, LightGBM, AdaBoost.  
 **Results:**  
-- Accuracy: ~33–39% (only slightly better than random baseline ~25% for 4 classes).  
-- F1‑macro as low as 0.14 – model struggles with minority classes (especially class 3 with only 41 test samples).  
-- Log loss high (>1.2).  
-- **Class imbalance** is the main issue; adding class weights or SMOTE would be needed for improvement.
+- Accuracy: ~35–39% (barely above random 25%).  
+- F1‑weighted as low as 0.21.  
+- **Poor performance due to:**  
+  - Weak relationship between health features and education level.  
+  - Class imbalance (class 3 has only 41 test samples).  
 
-### 5. Model Evaluation & Discussion  
-- For regression: **MAE** is most interpretable (MMSE points); MAPE unreliable when true values are near zero.  
-- For binary classification: **F1‑score** and **AUC** are best (imbalance not severe but still important).  
-- For multiclass: **F1‑weighted** accounts for class support.  
-- Provided thorough answers to all discussion questions (bias‑variance, L1 vs L2, kernel trick, regularising trees, micro/macro F1, multi‑label vs multiclass, etc.).
+### 5. Multiclass Classification (Improved: MMSE Categories)  
+
+**Why a better target?**  
+MMSE categories (Normal, Mild, Moderate, Severe) are clinically relevant and directly linked to the health features.  
+
+**Data preparation fix:**  
+- Created `MMSE_Category` from MMSE scores.  
+- **Removed both `MMSE` and `MMSE_Category` from features** – no leakage.  
+
+**Results:**  
+- Best model (SVM OvR): accuracy = 36.5%, F1‑weighted = 0.313.  
+- Performance is moderate because only non‑cognitive features (age, BP, cholesterol, lifestyle) remain.  
+- **Confirms** that predicting exact cognitive stage from basic health metrics is difficult without direct cognitive assessments.  
+
+**Metric choice:** F1‑Weighted accounts for class imbalance (normal and mild cases are underrepresented).
 
 ### 6. Error Analysis  
-- Examined misclassified binary cases: most borderline patients have MMSE scores near the diagnostic threshold.  
-- Feature importance (Random Forest) shows top predictors for Diagnosis: `FunctionalAssessment`, `ADL`, `MMSE` (logical).
+- Examined 71 misclassifications (Kernel SVM).  
+- Most errors occur for borderline patients (early‑stage Alzheimer’s with MMSE near normal).  
+- Feature importance (Random Forest) shows `FunctionalAssessment` and `ADL` are top predictors for Diagnosis – logical.
 
 ## Issues Encountered & Lessons Learned
 
 | Problem | Why it happened | What I learned |
 |---------|----------------|----------------|
-| **Negative R² for MMSE regression** | Features have almost no correlation with MMSE (non‑linear or no relationship). Even tree‑based models failed. | Regression requires features with genuine predictive power; not every dataset is suited for every task. |
-| **Low multiclass accuracy (≤39%)** | Severe class imbalance (class 3 has 41 test samples vs 162 for class 1) and weak feature‑class relationships. | Always check class distribution; use F1‑weighted or macro, not accuracy. |
-| **MAPE > 400%** | Division by very small true MMSE values (0–30). | Use alternative metrics like Median Absolute Error for bounded targets. |
-| **Kernel Ridge performed worse than linear** | Default `gamma=0.1` was suboptimal; tuning `alpha` and `gamma` slightly improved it but still negative R². | Kernel methods are not magic – they need proper hyperparameter search. |
+| **Perfect R² (1.0) for regression** | `MMSE` was accidentally left in features (data leakage). | Always remove the target from features – even for regression. |
+| **Perfect multiclass accuracy (1.0)** | `MMSE` was still in features when predicting `MMSE_Category`. | The same leakage can affect classification; clean features per task. |
+| **Negative R² for MMSE after fix?** | Actually R² became good (0.89) after removing leakage. | Leakage can mask true relationships. |
+| **Low multiclass accuracy (≤39%)** | Weak feature‑target relationship and class imbalance. | Choose a target that is naturally related to the features. |
+| **Kernel Ridge performed worse than linear** | Default `gamma=0.1` was suboptimal; also kernel methods are not magic. | Always tune hyperparameters; don't assume non‑linear = better. |
 
 ## How to Run
 
@@ -80,8 +98,5 @@ Models: SVM (OvR), Multinomial Logistic, KNN (k=20), Decision Tree (depth=1), XG
 ## Submission Files
 
 - `assignment2.ipynb` – main notebook with all code, outputs, and explanations  
-- `README2.md` – this file  
-- `data.md` – the dataset I used
----
-
-*Note: Poor regression results are **not** a bug in the code, they actually reflect the actual (lack of) predictive relationship in the dataset. The implementation, evaluation, and analysis have been implemented correctly*
+- `README.md` – this file  
+- `data.csv` – the dataset used
