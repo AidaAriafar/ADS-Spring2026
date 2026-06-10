@@ -3,4 +3,6 @@ This repo contains the assignments submitted during the Applied Data Science cou
 
 ## [**assignment1**](https://github.com/AidaAriafar/ADS-Spring2026/tree/main/Assignment1) : Healthcare Data Cleaning & Preprocessing
 ## [**assignment2**](https://github.com/AidaAriafar/ADS-Spring2026/tree/main/Assignment2) : Regression & Classification Modeling (Alzheimer’s Disease dataset)
+## [**assignment3**](https://github.com/AidaAriafar/ADS-Spring2026/tree/main/Assignment3) : Deep Learning Foundations: MLP, CNN, RNN & Transformer Architectures
+
 
