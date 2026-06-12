@@ -1,10 +1,8 @@
 # Assignment 3 — Deep Learning (MLP · CNN · RNN · Transformer)
 
-**Course:** ADS 2026 — Sharif University of Technology  
-**Author:** Aida Aryafar (402101193)  
 **Framework:** PyTorch
 
-This repository contains the implementation and analysis for Assignment 3, focusing on modern deep learning architectures.
+This part contains the implementation and analysis for Assignment 3, focusing on modern deep learning architectures.
 
 The goal of this assignment is not to train a large number of models, but to understand how different neural network architectures, optimization methods, and regularization techniques affect model performance and generalization.
 
