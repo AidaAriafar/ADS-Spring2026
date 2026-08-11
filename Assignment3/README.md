@@ -1,4 +1,4 @@
-# Assignment 3 — Deep Learning (MLP · CNN · RNN · Transformer)
+# Assignment 3 — Deep Learning Architectures for Biomedical Data (MLP · CNN · RNN · Transformer)
 
 **Framework:** PyTorch
 
